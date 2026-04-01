@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ShopWatcher;
 using ShopWatcher.Data;
 using ShopWatcher.Scrapers;
+using ShopWatcher.Services;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -12,6 +13,8 @@ builder.Services.AddHostedService<Worker>();
 
 builder.Services.AddHttpClient<PchomeScraper>();
 builder.Services.AddSingleton<IScraper, PchomeScraper>();
+
+builder.Services.AddHostedService<StockCheckerService>();
 
 var host = builder.Build();
 

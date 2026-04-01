@@ -12,6 +12,7 @@ builder.Services.AddHttpClient<PchomeScraper>();
 builder.Services.AddSingleton<IScraper, PchomeScraper>();
 
 builder.Services.AddHostedService<StockCheckerService>();
+builder.Services.AddHostedService<TelegramBotService>();
 
 var host = builder.Build();
 

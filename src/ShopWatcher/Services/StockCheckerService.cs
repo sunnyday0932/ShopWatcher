@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ShopWatcher.Data;
 using ShopWatcher.Scrapers;
 using Telegram.Bot;
@@ -11,10 +12,11 @@ public class StockCheckerService(
     IServiceScopeFactory scopeFactory,
     IEnumerable<IScraper> scrapers,
     ITelegramBotClient botClient,
+    ILogger<StockCheckerService> logger,
     TimeSpan interval) : BackgroundService
 {
-    public StockCheckerService(IServiceScopeFactory scopeFactory, IEnumerable<IScraper> scrapers, ITelegramBotClient botClient)
-        : this(scopeFactory, scrapers, botClient, TimeSpan.FromSeconds(30)) { }
+    public StockCheckerService(IServiceScopeFactory scopeFactory, IEnumerable<IScraper> scrapers, ITelegramBotClient botClient, ILogger<StockCheckerService> logger)
+        : this(scopeFactory, scrapers, botClient, logger, TimeSpan.FromSeconds(30)) { }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -39,19 +41,29 @@ public class StockCheckerService(
         var uniqueUrls = activeItems.Select(w => w.Url).Distinct().ToList();
         var stockResults = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
+        logger.LogDebug("開始庫存檢查，共 {Count} 個不重複 URL", uniqueUrls.Count);
+
         foreach (var url in uniqueUrls)
         {
             var scraper = scrapers.FirstOrDefault(s => s.CanHandle(url));
-            if (scraper is null) continue;
+            if (scraper is null)
+            {
+                logger.LogDebug("找不到對應的 scraper，略過 {Url}", url);
+                continue;
+            }
 
             try
             {
-                stockResults[url] = await scraper.IsInStockAsync(url, ct);
+                var inStock = await scraper.IsInStockAsync(url, ct);
+                stockResults[url] = inStock;
+                if (inStock)
+                    logger.LogDebug("{Url} → 有庫存", url);
+                else
+                    logger.LogDebug("{Url} → 無庫存", url);
             }
             catch (Exception ex)
             {
-                // 例外時不寫入 stockResults，保持「未知」語意，不發通知
-                Console.Error.WriteLine($"[StockChecker] Error checking {url}: {ex.Message}");
+                logger.LogWarning(ex, "檢查 {Url} 時發生錯誤", url);
             }
         }
 
@@ -59,6 +71,7 @@ public class StockCheckerService(
         {
             if (!stockResults.TryGetValue(item.Url, out var inStock) || !inStock) continue;
 
+            logger.LogInformation("{Url} 補貨，通知 ChatId {ChatId}", item.Url, item.ChatId);
             await botClient.SendRequest(new SendMessageRequest
             {
                 ChatId = item.ChatId,

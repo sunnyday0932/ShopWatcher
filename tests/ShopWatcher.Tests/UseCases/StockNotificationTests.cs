@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using ShopWatcher.Data;
@@ -37,7 +38,7 @@ public class StockNotificationTests
         scraper.IsInStockAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new StockCheckerService(scopeFactory, new[] { scraper }, botClient, TimeSpan.Zero);
+        var service = new StockCheckerService(scopeFactory, new[] { scraper }, botClient, NullLogger<StockCheckerService>.Instance, TimeSpan.Zero);
 
         await service.CheckOnceAsync(CancellationToken.None);
 
@@ -58,7 +59,7 @@ public class StockNotificationTests
         scraper.IsInStockAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new StockCheckerService(scopeFactory, new[] { scraper }, botClient, TimeSpan.Zero);
+        var service = new StockCheckerService(scopeFactory, new[] { scraper }, botClient, NullLogger<StockCheckerService>.Instance, TimeSpan.Zero);
 
         await service.CheckOnceAsync(CancellationToken.None);
 
@@ -82,7 +83,7 @@ public class StockNotificationTests
         scraper.IsInStockAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new StockCheckerService(scopeFactory, new[] { scraper }, botClient, TimeSpan.Zero);
+        var service = new StockCheckerService(scopeFactory, new[] { scraper }, botClient, NullLogger<StockCheckerService>.Instance, TimeSpan.Zero);
 
         await service.CheckOnceAsync(CancellationToken.None);
 
@@ -103,7 +104,7 @@ public class StockNotificationTests
         scraper.CanHandle(Arg.Any<string>()).Returns(true);
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new StockCheckerService(scopeFactory, new[] { scraper }, botClient, TimeSpan.Zero);
+        var service = new StockCheckerService(scopeFactory, new[] { scraper }, botClient, NullLogger<StockCheckerService>.Instance, TimeSpan.Zero);
 
         await service.CheckOnceAsync(CancellationToken.None);
 
@@ -123,7 +124,7 @@ public class StockNotificationTests
             .ThrowsAsync(new HttpRequestException("Network error"));
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new StockCheckerService(scopeFactory, new[] { scraper }, botClient, TimeSpan.Zero);
+        var service = new StockCheckerService(scopeFactory, new[] { scraper }, botClient, NullLogger<StockCheckerService>.Instance, TimeSpan.Zero);
 
         // scraper 拋出例外不應中斷，也不應發送通知
         await service.CheckOnceAsync(CancellationToken.None);

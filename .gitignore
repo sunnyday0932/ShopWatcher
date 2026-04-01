@@ -6,6 +6,9 @@
 # Claude Code local settings
 .claude/settings.local.json
 
+# Local development settings (contains secrets)
+src/ShopWatcher/appsettings.Development.json
+
 # Git worktrees
 .worktrees/
 

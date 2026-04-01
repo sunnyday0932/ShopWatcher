@@ -41,7 +41,7 @@
 
 ### 方案
 
-單一 .NET Worker Service + SQLite，打包為單一 Docker container。
+單一 .NET 10 Worker Service + SQLite，打包為單一 Docker container。
 
 ### 專案結構
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-ShopWatcher — a .NET project (inferred from the Visual Studio `.gitignore`). Source code has not yet been added; update this file once the project structure is established.
+ShopWatcher — a .NET 10 Worker Service project. Source code has not yet been added; update this file once the project structure is established.
 
 ## Commands
 

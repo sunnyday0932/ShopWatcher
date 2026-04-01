@@ -47,7 +47,7 @@ docker compose up -d
 
 ### 需求
 
-- .NET 8 SDK
+- .NET 10 SDK
 - JetBrains Rider 或 Visual Studio
 
 ### 執行測試

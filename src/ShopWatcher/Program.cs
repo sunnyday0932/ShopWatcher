@@ -14,7 +14,7 @@ var intervalSeconds = builder.Configuration.GetValue<int>("Checker:IntervalSecon
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=shopwatcher.db"));
 
-builder.Services.AddHttpClient<PchomeScraper>();
+builder.Services.AddHttpClient(nameof(PchomeScraper));
 builder.Services.AddSingleton<IScraper, PchomeScraper>();
 builder.Services.AddSingleton<ITelegramBotClient>(_ => new TelegramBotClient(botToken));
 builder.Services.AddSingleton(typeof(TimeSpan), TimeSpan.FromSeconds(intervalSeconds));

@@ -1,9 +1,18 @@
 using System.Text.Json;
+using System.Net.Http;
 
 namespace ShopWatcher.Scrapers;
 
-public class PchomeScraper(HttpClient httpClient) : IScraper
+public class PchomeScraper(IHttpClientFactory httpClientFactory) : IScraper
 {
+    // 保留此建構子供測試直接傳入 HttpClient 使用
+    private readonly HttpClient? _testHttpClient;
+
+    public PchomeScraper(HttpClient httpClient) : this((IHttpClientFactory)null!)
+    {
+        _testHttpClient = httpClient;
+    }
+
     public bool CanHandle(string url)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
@@ -12,7 +21,8 @@ public class PchomeScraper(HttpClient httpClient) : IScraper
 
     public async Task<bool> IsInStockAsync(string url, CancellationToken ct = default)
     {
-        // 從網址取出商品 ID，例如 DGCQ39-A900JSZVL
+        var httpClient = _testHttpClient ?? httpClientFactory.CreateClient(nameof(PchomeScraper));
+
         var productId = ExtractProductId(url);
         if (productId is null) return false;
 
@@ -20,7 +30,6 @@ public class PchomeScraper(HttpClient httpClient) : IScraper
         var response = await httpClient.GetStringAsync(apiUrl, ct);
         var json = JsonDocument.Parse(response);
 
-        // 若 prods 陣列有資料且第一筆有 inStock 欄位為 true，則有貨
         if (json.RootElement.TryGetProperty("prods", out var prods) && prods.GetArrayLength() > 0)
         {
             var first = prods[0];
@@ -34,7 +43,6 @@ public class PchomeScraper(HttpClient httpClient) : IScraper
 
     private static string? ExtractProductId(string url)
     {
-        // https://24h.pchome.com.tw/prod/DGCQ39-A900JSZVL → DGCQ39-A900JSZVL
         var uri = new Uri(url);
         var segments = uri.AbsolutePath.Split('/');
         return segments.LastOrDefault(s => !string.IsNullOrEmpty(s));

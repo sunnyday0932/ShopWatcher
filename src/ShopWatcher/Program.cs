@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using ShopWatcher;
 using ShopWatcher.Data;
 using ShopWatcher.Scrapers;
 using ShopWatcher.Services;
@@ -8,8 +7,6 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=shopwatcher.db"));
-
-builder.Services.AddHostedService<Worker>();
 
 builder.Services.AddHttpClient<PchomeScraper>();
 builder.Services.AddSingleton<IScraper, PchomeScraper>();

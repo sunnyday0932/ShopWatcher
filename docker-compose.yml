@@ -1,0 +1,13 @@
+services:
+  shopwatcher:
+    build: .
+    restart: unless-stopped
+    environment:
+      - Telegram__BotToken=${TELEGRAM__BOTTOKEN}
+      - ConnectionStrings__Default=Data Source=/app/data/shopwatcher.db
+      - Checker__IntervalSeconds=30
+    volumes:
+      - shopwatcher-data:/app/data
+
+volumes:
+  shopwatcher-data:

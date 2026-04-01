@@ -7,19 +7,22 @@ using Telegram.Bot.Requests;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ShopWatcher.Tests.UseCases;
 
 public class ListCommandTests
 {
-    private static AppDbContext CreateDb()
+    private static (AppDbContext db, IServiceScopeFactory scopeFactory) CreateDbWithScope()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        var db = new AppDbContext(options);
+        var dbName = Guid.NewGuid().ToString();
+        var services = new ServiceCollection();
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseInMemoryDatabase(dbName));
+        var provider = services.BuildServiceProvider();
+        var db = provider.GetRequiredService<AppDbContext>();
         db.Database.EnsureCreated();
-        return db;
+        return (db, provider.GetRequiredService<IServiceScopeFactory>());
     }
 
     private static Update MakeListUpdate(long chatId) => new()
@@ -35,7 +38,7 @@ public class ListCommandTests
     [Fact]
     public async Task ListCommand_ReturnsActiveItemsForUser()
     {
-        var db = CreateDb();
+        var (db, scopeFactory) = CreateDbWithScope();
         db.WatchItems.AddRange(
             new WatchItem { ChatId = 123, Url = "https://24h.pchome.com.tw/prod/A", IsActive = true },
             new WatchItem { ChatId = 123, Url = "https://24h.pchome.com.tw/prod/B", IsActive = false },
@@ -44,7 +47,7 @@ public class ListCommandTests
         await db.SaveChangesAsync();
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(db, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient);
 
         await service.HandleUpdateAsync(MakeListUpdate(123), CancellationToken.None);
 
@@ -60,9 +63,9 @@ public class ListCommandTests
     [Fact]
     public async Task ListCommand_EmptyList_RepliesWithNoItemsMessage()
     {
-        var db = CreateDb();
+        var (_, scopeFactory) = CreateDbWithScope();
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(db, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient);
 
         await service.HandleUpdateAsync(MakeListUpdate(123), CancellationToken.None);
 

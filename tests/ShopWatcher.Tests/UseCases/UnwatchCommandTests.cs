@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using ShopWatcher.Data;
 using ShopWatcher.Data.Models;
@@ -12,14 +13,16 @@ namespace ShopWatcher.Tests.UseCases;
 
 public class UnwatchCommandTests
 {
-    private static AppDbContext CreateDb()
+    private static (AppDbContext db, IServiceScopeFactory scopeFactory) CreateDbWithScope()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        var db = new AppDbContext(options);
+        var dbName = Guid.NewGuid().ToString();
+        var services = new ServiceCollection();
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseInMemoryDatabase(dbName));
+        var provider = services.BuildServiceProvider();
+        var db = provider.GetRequiredService<AppDbContext>();
         db.Database.EnsureCreated();
-        return db;
+        return (db, provider.GetRequiredService<IServiceScopeFactory>());
     }
 
     private static Update MakeUnwatchUpdate(long chatId, string url) => new()
@@ -35,26 +38,26 @@ public class UnwatchCommandTests
     [Fact]
     public async Task UnwatchCommand_DeactivatesItem()
     {
-        var db = CreateDb();
+        var (db, scopeFactory) = CreateDbWithScope();
         var url = "https://24h.pchome.com.tw/prod/TEST-001";
         db.WatchItems.Add(new WatchItem { ChatId = 123, Url = url, IsActive = true });
         await db.SaveChangesAsync();
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(db, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient);
 
         await service.HandleUpdateAsync(MakeUnwatchUpdate(123, url), CancellationToken.None);
 
-        var item = await db.WatchItems.SingleAsync();
+        var item = await db.WatchItems.AsNoTracking().SingleAsync();
         Assert.False(item.IsActive);
     }
 
     [Fact]
     public async Task UnwatchCommand_UrlNotFound_RepliesWithErrorMessage()
     {
-        var db = CreateDb();
+        var (_, scopeFactory) = CreateDbWithScope();
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(db, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient);
 
         await service.HandleUpdateAsync(
             MakeUnwatchUpdate(123, "https://24h.pchome.com.tw/prod/NOT-EXIST"),
@@ -68,7 +71,7 @@ public class UnwatchCommandTests
     [Fact]
     public async Task UnwatchCommand_DoesNotAffectOtherUsers()
     {
-        var db = CreateDb();
+        var (db, scopeFactory) = CreateDbWithScope();
         var url = "https://24h.pchome.com.tw/prod/SHARED-001";
         db.WatchItems.AddRange(
             new WatchItem { ChatId = 111, Url = url, IsActive = true },
@@ -77,11 +80,11 @@ public class UnwatchCommandTests
         await db.SaveChangesAsync();
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(db, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient);
 
         await service.HandleUpdateAsync(MakeUnwatchUpdate(111, url), CancellationToken.None);
 
-        var items = await db.WatchItems.ToListAsync();
+        var items = await db.WatchItems.AsNoTracking().ToListAsync();
         Assert.False(items.Single(w => w.ChatId == 111).IsActive);
         Assert.True(items.Single(w => w.ChatId == 222).IsActive);
     }

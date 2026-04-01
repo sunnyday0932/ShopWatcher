@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ShopWatcher.Data;
 using ShopWatcher.Data.Models;
 using Telegram.Bot;
@@ -9,35 +10,35 @@ using Telegram.Bot.Types.Enums;
 
 namespace ShopWatcher.Services;
 
-public class TelegramBotService(AppDbContext db, ITelegramBotClient botClient) : BackgroundService
+public class TelegramBotService(IServiceScopeFactory scopeFactory, ITelegramBotClient botClient) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var receiverOptions = new ReceiverOptions { AllowedUpdates = [UpdateType.Message] };
         await botClient.ReceiveAsync(
-            HandleUpdateInternalAsync,
+            (_, update, ct) => HandleUpdateAsync(update, ct),
             HandleErrorAsync,
             receiverOptions,
             stoppingToken);
     }
-
-    private async Task HandleUpdateInternalAsync(ITelegramBotClient _, Update update, CancellationToken ct)
-        => await HandleUpdateAsync(update, ct);
 
     public async Task HandleUpdateAsync(Update update, CancellationToken ct)
     {
         if (update.Message?.Text is not { } text) return;
         var chatId = update.Message.Chat.Id;
 
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
         if (text.StartsWith("/watch "))
-            await HandleWatchAsync(chatId, text["/watch ".Length..].Trim(), ct);
+            await HandleWatchAsync(db, chatId, text["/watch ".Length..].Trim(), ct);
         else if (text.StartsWith("/unwatch "))
-            await HandleUnwatchAsync(chatId, text["/unwatch ".Length..].Trim(), ct);
+            await HandleUnwatchAsync(db, chatId, text["/unwatch ".Length..].Trim(), ct);
         else if (text == "/list")
-            await HandleListAsync(chatId, ct);
+            await HandleListAsync(db, chatId, ct);
     }
 
-    private async Task HandleWatchAsync(long chatId, string url, CancellationToken ct)
+    private async Task HandleWatchAsync(AppDbContext db, long chatId, string url, CancellationToken ct)
     {
         var existing = await db.WatchItems.FirstOrDefaultAsync(w => w.ChatId == chatId && w.Url == url, ct);
         if (existing is not null)
@@ -60,7 +61,7 @@ public class TelegramBotService(AppDbContext db, ITelegramBotClient botClient) :
         await SendMessageAsync(chatId, $"✅ 已開始監控：\n{url}", ct);
     }
 
-    private async Task HandleUnwatchAsync(long chatId, string url, CancellationToken ct)
+    private async Task HandleUnwatchAsync(AppDbContext db, long chatId, string url, CancellationToken ct)
     {
         var item = await db.WatchItems.FirstOrDefaultAsync(w => w.ChatId == chatId && w.Url == url && w.IsActive, ct);
         if (item is null)
@@ -74,7 +75,7 @@ public class TelegramBotService(AppDbContext db, ITelegramBotClient botClient) :
         await SendMessageAsync(chatId, $"🛑 已停止監控：\n{url}", ct);
     }
 
-    private async Task HandleListAsync(long chatId, CancellationToken ct)
+    private async Task HandleListAsync(AppDbContext db, long chatId, CancellationToken ct)
     {
         var items = await db.WatchItems
             .Where(w => w.ChatId == chatId && w.IsActive)

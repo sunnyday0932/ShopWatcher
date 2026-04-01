@@ -4,8 +4,11 @@ namespace ShopWatcher.Scrapers;
 
 public class PchomeScraper(HttpClient httpClient) : IScraper
 {
-    public bool CanHandle(string url) =>
-        url.Contains("pchome.com.tw", StringComparison.OrdinalIgnoreCase);
+    public bool CanHandle(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
+        return uri.Host.EndsWith("pchome.com.tw", StringComparison.OrdinalIgnoreCase);
+    }
 
     public async Task<bool> IsInStockAsync(string url, CancellationToken ct = default)
     {
@@ -21,8 +24,9 @@ public class PchomeScraper(HttpClient httpClient) : IScraper
         if (json.RootElement.TryGetProperty("prods", out var prods) && prods.GetArrayLength() > 0)
         {
             var first = prods[0];
-            if (first.TryGetProperty("inStock", out var inStock))
-                return inStock.GetBoolean();
+            if (first.TryGetProperty("inStock", out var inStock) &&
+                inStock.ValueKind == JsonValueKind.True)
+                return true;
         }
 
         return false;

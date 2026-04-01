@@ -21,4 +21,12 @@ public class PchomeScraperTests
     {
         Assert.False(_scraper.CanHandle(url));
     }
+
+    [Theory]
+    [InlineData("https://pchome.com.tw.attacker.com/prod/FAKE")]
+    [InlineData("not-a-url")]
+    public void CanHandle_SpoofedOrInvalidUrl_ReturnsFalse(string url)
+    {
+        Assert.False(_scraper.CanHandle(url));
+    }
 }

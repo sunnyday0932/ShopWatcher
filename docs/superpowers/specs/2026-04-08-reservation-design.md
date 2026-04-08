@@ -168,15 +168,38 @@ public class ReservationConfig
 
 ### IReservationBooker / InlineReservationBooker
 
-> B1-B2 為單元測試；B3-B5 為 E2E 測試（需真實 Playwright + inline.app 測試頁面），`ReservationService` 單元測試改用 mock `IReservationBooker`。
+> B1-B2 為單元測試；B3-B5 為 E2E 測試（需真實 Playwright + inline.app 真實頁面），`ReservationService` 單元測試改用 mock `IReservationBooker`。
+
+#### E2E 測試設計
+
+**有頭模式（Headed mode）：** E2E 測試一律以有頭模式（非 headless）執行，讓測試人員能看到瀏覽器的實際操作畫面確認流程正確。
+
+**送出開關（DryRun）：** `InlineReservationBooker` 接受一個 `DryRun` 旗標：
+- `DryRun = true`（預設）：流程執行到按下確認按鈕前停止，不送出訂位，回傳 `Success=false, DryRun=true`
+- `DryRun = false`：真正按下確認按鈕送出訂位
+
+此旗標透過 `appsettings` 或環境變數控制（`Reservation:DryRun`），預設為 `true`。測試時保持預設值即可安全執行而不產生真實訂位。
+
+#### BookingResult 補充欄位
+
+```csharp
+public record BookingResult(
+    bool Success,
+    bool WasWaitlist,
+    bool DryRun,              // 是否為 DryRun 模式（未真正送出）
+    DateOnly? BookedDate,
+    TimeOnly? BookedTime,
+    string? ErrorMessage);
+```
 
 | # | 情境 | 預期行為 |
 |---|------|----------|
 | B1 | `CanHandle` 傳入 inline.app URL | 回傳 `true` |
 | B2 | `CanHandle` 傳入非 inline.app URL | 回傳 `false` |
-| B3 | 頁面有確認位子（E2E） | 填入資料、送出，回傳 `Success=true` |
-| B4 | 頁面只有候補（E2E） | 不填不送，回傳 `WasWaitlist=true, Success=false` |
-| B5 | 頁面完全無位（E2E） | 回傳 `Success=false, WasWaitlist=false` |
+| B3 | 頁面有確認位子，DryRun=true（E2E） | 填入資料但不送出，回傳 `Success=false, DryRun=true`，瀏覽器畫面停在確認頁 |
+| B4 | 頁面有確認位子，DryRun=false（E2E） | 填入資料、按下送出，回傳 `Success=true, DryRun=false` |
+| B5 | 頁面只有候補（E2E） | 不填不送，回傳 `WasWaitlist=true, Success=false` |
+| B6 | 頁面完全無位（E2E） | 回傳 `Success=false, WasWaitlist=false` |
 
 ### TelegramBotService 新增指令
 
@@ -202,10 +225,16 @@ public class ReservationConfig
 ```json
 {
   "Reservation": {
-    "TimeZone": "Asia/Taipei"
+    "TimeZone": "Asia/Taipei",
+    "DryRun": true
   }
 }
 ```
+
+| 設定鍵 | 預設值 | 說明 |
+|--------|--------|------|
+| `Reservation:TimeZone` | `Asia/Taipei` | 排程午夜時區 |
+| `Reservation:DryRun` | `true` | `true` 時流程執行至送出前停止，不產生真實訂位 |
 
 個人訂位資訊（姓名、電話、人數、URL、LookAheadDays）全部儲存在 DB，可透過 Telegram 指令設定。
 

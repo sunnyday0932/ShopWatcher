@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ShopWatcher.Bookers;
 using ShopWatcher.Data;
 using ShopWatcher.Scrapers;
 using ShopWatcher.Services;
@@ -19,8 +20,16 @@ builder.Services.AddSingleton<IScraper, PchomeScraper>();
 builder.Services.AddSingleton<ITelegramBotClient>(_ => new TelegramBotClient(botToken));
 builder.Services.AddSingleton(typeof(TimeSpan), TimeSpan.FromSeconds(intervalSeconds));
 
+var dryRun = builder.Configuration.GetValue<bool>("Reservation:DryRun", true);
+builder.Services.AddSingleton<IReservationBooker>(sp =>
+    new InlineReservationBooker(
+        dryRun,
+        sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<InlineReservationBooker>>()));
+builder.Services.AddSingleton<IReservationRunner, ReservationService.DefaultReservationRunner>();
+
 builder.Services.AddHostedService<TelegramBotService>();
 builder.Services.AddHostedService<StockCheckerService>();
+builder.Services.AddHostedService<ReservationService>();
 
 var host = builder.Build();
 

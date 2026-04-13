@@ -47,7 +47,7 @@ public class ListCommandTests
         await db.SaveChangesAsync();
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(scopeFactory, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient, Substitute.For<IReservationRunner>());
 
         await service.HandleUpdateAsync(MakeListUpdate(123), CancellationToken.None);
 
@@ -65,7 +65,7 @@ public class ListCommandTests
     {
         var (_, scopeFactory) = CreateDbWithScope();
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(scopeFactory, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient, Substitute.For<IReservationRunner>());
 
         await service.HandleUpdateAsync(MakeListUpdate(123), CancellationToken.None);
 

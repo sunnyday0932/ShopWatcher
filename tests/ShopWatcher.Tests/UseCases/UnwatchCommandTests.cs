@@ -44,7 +44,7 @@ public class UnwatchCommandTests
         await db.SaveChangesAsync();
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(scopeFactory, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient, Substitute.For<IReservationRunner>());
 
         await service.HandleUpdateAsync(MakeUnwatchUpdate(123, url), CancellationToken.None);
 
@@ -57,7 +57,7 @@ public class UnwatchCommandTests
     {
         var (_, scopeFactory) = CreateDbWithScope();
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(scopeFactory, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient, Substitute.For<IReservationRunner>());
 
         await service.HandleUpdateAsync(
             MakeUnwatchUpdate(123, "https://24h.pchome.com.tw/prod/NOT-EXIST"),
@@ -80,7 +80,7 @@ public class UnwatchCommandTests
         await db.SaveChangesAsync();
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(scopeFactory, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient, Substitute.For<IReservationRunner>());
 
         await service.HandleUpdateAsync(MakeUnwatchUpdate(111, url), CancellationToken.None);
 

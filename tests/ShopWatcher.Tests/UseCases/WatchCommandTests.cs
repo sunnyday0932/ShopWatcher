@@ -40,7 +40,7 @@ public class WatchCommandTests
     {
         var (db, scopeFactory) = CreateDbWithScope();
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(scopeFactory, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient, Substitute.For<IReservationRunner>());
         var url = "https://24h.pchome.com.tw/prod/TEST-001";
 
         await service.HandleUpdateAsync(MakeWatchUpdate(123, url), CancellationToken.None);
@@ -59,7 +59,7 @@ public class WatchCommandTests
         await db.SaveChangesAsync();
 
         var botClient = Substitute.For<ITelegramBotClient>();
-        var service = new TelegramBotService(scopeFactory, botClient);
+        var service = new TelegramBotService(scopeFactory, botClient, Substitute.For<IReservationRunner>());
 
         await service.HandleUpdateAsync(MakeWatchUpdate(123, "https://24h.pchome.com.tw/prod/TEST-002"), CancellationToken.None);
 

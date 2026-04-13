@@ -103,7 +103,7 @@ public class ReservationCommandTests
 
         Assert.Equal(1, await db.ReservationConfigs.AsNoTracking().CountAsync());
         await botClient.Received(1).SendRequest(
-            Arg.Is<SendMessageRequest>(r => r.ChatId == 123 && r.Text.Contains("已存在") || r.Text.Contains("已經")),
+            Arg.Is<SendMessageRequest>(r => r.ChatId == 123 && (r.Text.Contains("已存在") || r.Text.Contains("已經"))),
             Arg.Any<CancellationToken>());
     }
 

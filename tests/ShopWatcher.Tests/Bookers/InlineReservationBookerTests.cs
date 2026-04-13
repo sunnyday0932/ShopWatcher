@@ -16,4 +16,8 @@ public class InlineReservationBookerTests
     [Fact]
     public void CanHandle_NonInlineUrl_ReturnsFalse() =>
         Assert.False(CreateBooker().CanHandle("https://24h.pchome.com.tw/prod/TEST-001"));
+
+    [Fact]
+    public void CanHandle_FakeInlineUrl_ReturnsFalse() =>
+        Assert.False(CreateBooker().CanHandle("https://notinline.app/booking/123"));
 }

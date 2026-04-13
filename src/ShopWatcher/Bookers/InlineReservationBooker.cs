@@ -6,7 +6,8 @@ public class InlineReservationBooker(bool dryRun, ILogger<InlineReservationBooke
 {
     public bool CanHandle(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
-        uri.Host.EndsWith("inline.app", StringComparison.OrdinalIgnoreCase);
+        (uri.Host.Equals("inline.app", StringComparison.OrdinalIgnoreCase) ||
+         uri.Host.EndsWith(".inline.app", StringComparison.OrdinalIgnoreCase));
 
     public Task<BookingResult> BookAsync(string url, ReservationInfo info, CancellationToken ct = default) =>
         throw new NotImplementedException();
